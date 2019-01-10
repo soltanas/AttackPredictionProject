@@ -1,0 +1,235 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+```{r}
+terr = read.csv2(file = "globalterrorismdb_0617dist.csv",header = T,sep = ";" ,dec = ",",na.strings = "")
+head(terr)
+```
+
+```{r}
+terr = terr[which(terr$iyear>=1997),]
+dfFinal = data.frame("country"=0,"zero_zero"=0,"zero_one"=0,"one_zero"=0,"one_one"=0)
+themod = data.frame("country_txt"=0,"iyear"=0,"imonth"=0,"act"=0)
+```
+#Partie préparation
+dfFinal va contnir la matrice de transition de la chaine de markov(sous forme de ligne ) 
+themod va contenir les données préparer car initialement dans notre dataset nous n'avons pas les données par mois et de plus il faut générer les colonnes avec act terroriste = 0 pour pouvoir entrainé le model
+```{r}
+k = levels(terr$country_txt)
+for (i in seq(1,length(k))){
+  var =  terr[which(terr$country_txt==k[i]),c("country_txt","iyear","imonth","longitude","latitude")]
+  if(nrow(var)>=20){
+  var$act=1
+    as.factor(var$iyear)
+    for( z in seq(1997,2017)){
+      for(j in seq(1,12)){
+        if(nrow(var[which(var$iyear==z & var$imonth == j),])==0){
+          themod=rbind(themod,c(as.character(k[i]),z,j,0))   
+      }else{
+        
+        themod=rbind(themod,c(as.character(k[i]),z,j,1))   
+        
+      }
+    }
+  }
+  }
+}
+
+head(themod)
+```
+On a préparer les données il est temp de construire les matrices de transition pour chaque pays
+```{r}
+str(themod)
+themod$country_txt=as.factor(themod$country_txt)
+k= levels(themod$country_txt)
+for(it1 in seq(2,length(k)) ){
+ct =  themod[which(themod$country_txt==k[it1]),]
+soted = ct[order(ct$iyear,ct$imonth),]
+var = soted$act
+last = 0
+
+zero_zero=0
+zero_one=0
+one_zero=0
+one_one=0
+for( i in seq(1,(length(var)-1))){ 
+  if(var[i] ==0 & var [i+1]==0){
+    zero_zero =zero_zero +1
+  }
+  if(var[i] ==0 & var [i+1]==1){
+    zero_one = zero_one+1
+  }
+  
+  if(var[i] ==1 & var [i+1]==0){
+    one_zero = one_zero + 1
+  }
+  if(var[i] ==1 & var [i+1]==1){
+    one_one = one_one +1
+  }
+  
+}
+a= zero_zero + zero_one
+b= one_zero + one_one
+dfFinal=rbind(dfFinal,c(as.character(k[it1]),zero_zero/a,zero_one/a,one_zero/b,one_one/b))
+
+}
+head(dfFinal)
+```
+Une fois les matrice créer nous allons prédire les futures variations 
+nous allons essayer avec les premiers mois de l'année 2016
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+valdata=themod[which(themod$imonth==1 & themod$iyear==2016),]
+nrow(valdata)
+nrow(dfFinal)
+dfFinal$zero_one = as.double(dfFinal$zero_one)
+dfFinal$zero_zero = as.double(dfFinal$zero_zero)
+dfFinal$one_zero = as.double(dfFinal$one_zero)
+dfFinal$one_one = as.double(dfFinal$one_one)
+valdata$act = as.numeric(valdata$act)
+str(dfFinal)
+  k = valdata$country_txt
+  for(i in seq(2,length(k))){
+    pays = valdata[which(valdata$country_txt==k[i]),"act"]
+    zero_zerp= dfFinal[which(dfFinal$country==k[i]),"zero_zero"]
+    zero_one= dfFinal[which(dfFinal$country==k[i]),"zero_one"]
+    one_zero=dfFinal[which(dfFinal$country==k[i]),"one_zero"]
+    one_one=dfFinal[which(dfFinal$country==k[i]),"one_one"]
+    for(j in seq(2,13)){
+    if(pays == 1){
+      pays = sample(c(0,1),replace = F,prob = c(one_zero,one_one))
+      valdata = rbind(valdata,c(as.character(k[i]),2016,j,pays))
+    }else{
+      pays = sample(c(0,1),replace = F,prob = c(zero_one,zero_one))
+      valdata = rbind(valdata,c(as.character(k[i]),2016,j,pays))
+      
+    }
+      }
+  }
+```
+On va voire les différance entre les donnée réel et les donnée prédite
+```{r}
+showme<-function(month,reel,prediction){
+data <- data.frame(Country=reel[which(reel$imonth==month),"country_txt"],Value=reel[which(reel$imonth==month),"act"])
+data2 <- data.frame(Country=prediction[which(prediction$imonth==month),"country_txt"],Value=prediction[which(prediction$imonth==month),"act"])
+
+library('rworldmap')
+
+pdf1 <- joinCountryData2Map(data, joinCode="NAME", nameJoinColumn="Country")
+pdf2 <- joinCountryData2Map(data2, joinCode="NAME", nameJoinColumn="Country")
+
+mapCountryData(pdf1, nameColumnToPlot="Value", catMethod="pretty", 
+               mapTitle="reel", mapRegion="world")
+mapCountryData(pdf2, nameColumnToPlot="Value", catMethod="pretty", 
+               mapTitle="predite", mapRegion="world")
+}
+```
+
+```{r, warning=FALSE}
+reel = themod[which(themod$iyear==2016),]
+showme(2,reel,valdata)
+
+```
+
+```{r}
+showme(3,reel,valdata)
+```
+
+```{r, warning=FALSE}
+showme(4,reel,valdata)
+```
+
+```{r, warning=FALSE}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```

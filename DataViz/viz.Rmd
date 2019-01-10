@@ -1,0 +1,356 @@
+---
+title: "VisualisationPlotly"
+author: "Ghassen Sultana"
+date: "10 janvier 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE, message=FALSE, warning=FALSE}
+terr = read.csv2(file = "globalterrorismdb_0617dist.csv",header = T,sep = ";" ,dec = ",",na.strings = "")
+terr = terr[which(terr$iyear>=1997),]
+# le choix de travailler avec des donnÃ©es qui date apres 1997 est que plusieurs feature manque avant cette date 
+# comme Incident Summary,Doubt Terrorism Proper?+ Alternative Designation,Part of Multiple Incident,Related Incidents
+# Unaffiliated Individual(s),Number of Perpetrators Captured,Claim of Responsibility? + Mode for Claim of Responsibility
+# et SURTOUT MOTIVE (Je pense que cette feature est la plus importante pour le travail a venir elle va nous donner une idÃ©e
+# sur la fenÃªtre qu'on va utiliser pour la suite du travail)
+
+#bo
+
+
+#Nombre d'attaque pour chaque annÃ©e
+Nbr=rep(0,20)
+NbrEchec=rep(0,20)
+NbrSuccees=rep(0,20)
+NbrMort=rep(0,20)
+NbrMortUs=rep(0,20)
+annee=seq(1997,2016,1)
+
+for( i in seq(1,length(annee),1)){
+  container = terr[which(terr$iyear==annee[i]),]
+  Nbr[i]= nrow(container)
+  NbrEchec[i]=nrow(container[which(container$success==0),])
+  NbrSuccees[i]=nrow(container[which(container$success==1),])
+  NbrMort[i]=sum(container$nkill,na.rm = T)
+  NbrMortUs[i]=sum(container$nkillus,na.rm = T)
+  
+}
+
+#Variation Nombre succÃ©e/Ã©chec par annÃ©e
+data <- data.frame(annee, Nbr,NbrEchec,NbrSuccees,NbrMort,NbrMortUs)
+library(plotly)
+p <- plot_ly(data, x = ~annee, y = ~Nbr, type = 'scatter',name='total' ,mode = 'lines+markers')%>%
+  add_trace(y = ~NbrEchec, name = 'Nombre d echec', mode = 'lines+markers') %>%
+  add_trace(y = ~NbrSuccees, name = 'Nombre de réussite', mode = 'lines+markers')
+p
+
+p <- plot_ly(data, x = ~annee, y = ~NbrMort,name='Nbr Mort', type = 'scatter', mode = 'lines+markers')%>%
+  add_trace(y = ~NbrMortUs, name = 'Nbr MortUs', mode = 'lines+markers')
+p
+
+
+
+Assassination = rep(0,20)
+Hijacking = rep(0,20)
+Kidnapping = rep(0,20)
+BarricadeIncident = rep(0,20)
+BombingExplosion = rep(0,20)
+ArmedAssault = rep(0,20)
+UnarmedAssault = rep(0,20)
+FacilityInfrastructureAttack = rep(0,20)
+Unknown = rep(0,20)
+
+for( i in seq(1,length(annee),1)){
+  container = terr[which(terr$iyear==annee[i]),]
+  Assassination[i]=nrow(container[which(container$attacktype1==1),])
+  ArmedAssault[i]=nrow(container[which(container$attacktype1==2),])
+  BombingExplosion[i]=nrow(container[which(container$attacktype1==3),])
+  Hijacking[i]=nrow(container[which(container$attacktype1==4),])
+  BarricadeIncident[i]=nrow(container[which(container$attacktype1==5),])
+  Kidnapping[i]=nrow(container[which(container$attacktype1==6),])
+  FacilityInfrastructureAttack [i]=nrow(container[which(container$attacktype1==7),])
+  UnarmedAssault[i]=nrow(container[which(container$attacktype1==8),])
+  Unknown[i]=nrow(container[which(container$attacktype1==9),])
+  
+}
+data <- data.frame(annee, UnarmedAssault,BarricadeIncident,Hijacking,Kidnapping,Assassination,FacilityInfrastructureAttack,BombingExplosion,ArmedAssault)
+
+
+
+p <- plot_ly(data, x = ~annee, y = ~BombingExplosion,name='Bombing', type = 'scatter', mode = 'lines+markers')%>%
+  add_trace(y = ~UnarmedAssault, name = 'Unarmed assault', mode = 'lines+markers') %>%
+  add_trace(y = ~BarricadeIncident, name = 'Barricade Incident', mode = 'lines+markers')%>%
+  add_trace(y = ~Hijacking, name = 'Hijacking', mode = 'lines+markers')%>%
+  add_trace(y = ~Kidnapping, name = 'Kidnapping', mode = 'lines+markers')%>%
+  add_trace(y = ~Assassination, name = 'Assassination', mode = 'lines+markers')%>%
+  add_trace(y = ~FacilityInfrastructureAttack, name = 'Facility Infrastructure attack', mode = 'lines+markers')%>%
+  add_trace(y = ~ArmedAssault, name = 'ArmedAssault', mode = 'lines+markers')
+
+
+p
+
+groupe=levels(terr$gname)
+groupe2=table(terr$gname)
+groupe2=sort(groupe2,decreasing = T)
+groupe2[1:11]
+
+
+
+cont <- data.frame("Categorie"=rownames(groupe2), groupe2)
+data <- cont[2:11,c('Categorie', 'Freq')]
+as.data.frame(data)
+p <- plot_ly(data, labels = ~Categorie, values = ~Freq, type = 'pie',textposition = 'inside',
+             textinfo = 'label+percent',
+             hoverinfo = 'text') %>%
+  layout(title = 'Top 10 des groupes qui fait des attaques',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+p
+
+
+Isil = rep(0,20)
+Taliban = rep(0,20)
+Al_shabab = rep(0,20)
+Boko_Haram = rep(0,20)
+Comm_party = rep(0,20)
+Irish_rep = rep(0,20)
+for( i in seq(1,length(annee),1)){
+  container = terr[which(terr$iyear==annee[i]),]
+  Isil[i]=nrow(container[which(container$gname=="Islamic State of Iraq and the Levant (ISIL)"),])
+  Taliban[i]=nrow(container[which(container$gname=="Taliban"),])
+  Al_shabab[i]=nrow(container[which(container$gname=="Al-Shabaab"),])
+  Boko_Haram[i]=nrow(container[which(container$gname=="Boko Haram"),])
+  Comm_party[i]=nrow(container[which(container$gname=="Communist Party of India - Maoist (CPI-Maoist)"),])
+  Irish_rep[i]=nrow(container[which(container$gname=="Irish Republican Army (IRA)"),])
+  
+  }
+p <- plot_ly(data, x = ~annee, y = ~Isil,name='Isil', type = 'scatter', mode = 'lines+markers')%>%
+  add_trace(y = ~Taliban, name = 'Taliban', mode = 'lines+markers') %>%
+  add_trace(y = ~Al_shabab, name = 'Al_shabab', mode = 'lines+markers')%>%
+  add_trace(y = ~Boko_Haram, name = 'Boko_Haram', mode = 'lines+markers')%>%
+  add_trace(y = ~Comm_party, name = 'Comm_party', mode = 'lines+markers')%>%
+  add_trace(y = ~Irish_rep, name = 'Irish_rep', mode = 'lines+markers')
+
+p
+
+groupe2=table(terr$claimmode_txt)
+groupe2=sort(groupe2,decreasing = T)
+pie(groupe2)
+
+cont <- data.frame("Categorie"=rownames(groupe2), groupe2)
+data <- cont[2:11,c('Categorie', 'Freq')]
+
+
+p <- plot_ly(data, labels = ~Categorie, values = ~Freq, type = 'pie',textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF')
+      ) %>%
+  layout(title = 'Top 10 des groupes qui fait des attaques',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+p
+
+groupe2=table(terr$country_txt)
+groupe2=sort(groupe2,decreasing = T)
+
+v <-rownames(groupe2[1:30])
+
+require(dplyr) #data manipulation
+require(tidyr) #data manipulation, wide to long format
+require(ggplot2) #ggplot package for plotting
+
+cont <- data.frame("Categorie"=rownames(groupe2[1:32]), groupe2[1:32])
+
+p <- cont %>%
+  plot_ly(labels = ~Categorie, values = ~Freq) %>%
+  add_pie(hole = 0.6) %>%
+  layout(title = "pays touchés attaques",  showlegend = T,
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+
+
+p
+
+groupe2["Tunisia"]
+
+#Cible prÃ©ferer des terroriste
+groupe2=table(terr$targtype1_txt)
+groupe2=sort(groupe2,decreasing = T)
+
+cont <- data.frame("Categorie"=rownames(groupe2[1:20]), groupe2[1:20])
+
+p <- cont %>%
+  plot_ly(labels = ~Categorie, values = ~Freq) %>%
+  add_pie(hole = 0.6) %>%
+  layout(title = "Cible préferer",  showlegend = T,
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+p
+
+groupe2=table(terr$targsubtype1_txt)
+groupe2=sort(groupe2,decreasing = T)
+cont <- data.frame("Categorie"=rownames(groupe2[1:20]), groupe2[1:20])
+
+p2 <- cont %>%
+  plot_ly(labels = ~Categorie, values = ~Freq) %>%
+  add_pie(hole = 0.8) %>%
+  layout(title = "Cible préferer",  showlegend = T,
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+
+p2
+
+groupe2=table(terr$motive)
+groupe2=sort(groupe2,decreasing = T)
+
+cont <- data.frame("Categorie"=rownames(groupe2[8:25]), groupe2[8:25])
+
+p2 <- cont %>%
+  plot_ly(labels = ~Categorie, values = ~Freq) %>%
+  add_pie(hole = 0.6) %>%
+  layout(title = "motif de l'attaque",  showlegend = F,
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+
+p2
+
+Tunis = terr[which(terr$country_txt=="Tunisia"),]
+
+groupe2=table(Tunis$attacktype1_txt)
+groupe2=sort(groupe2,decreasing = T)
+data <- data.frame("Categorie"=rownames(groupe2[1:6]), groupe2[1:6])
+
+p <- plot_ly(data, labels = ~Categorie, values = ~Freq, type = 'pie',textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF'),
+             hoverinfo = 'text',
+             text = ~paste(Freq, ' nombre de fois')) %>%
+  layout(title = 'Type d attaque en tunisie',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+p
+
+groupe2=table(Tunis$gname)
+groupe2=sort(groupe2,decreasing = T)
+
+data <- data.frame("Categorie"=rownames(groupe2[2:10]), groupe2[2:10])
+
+p <- plot_ly(data, labels = ~Categorie, values = ~Freq, type = 'pie',textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF'),
+             hoverinfo = 'text',
+             text = ~paste(Freq, ' nombre de fois')) %>%
+  layout(title = 'Type d attaque en tunisie',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+p
+
+groupe2=table(Tunis$targtype1_txt)
+groupe2=sort(groupe2,decreasing = T)
+
+data <- data.frame("Categorie"=rownames(groupe2[2:10]), groupe2[2:10])
+
+p <- plot_ly(data, labels = ~Categorie, values = ~Freq, type = 'pie',textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF'),
+             hoverinfo = 'text',
+             text = ~paste(Freq, ' nombre de fois')) %>%
+  layout(title = 'Type d attaque en tunisie',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+p
+
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+ word = terr$addnotes
+ word = na.omit(word)
+ docs <- Corpus(VectorSource(word[1:3500]))
+ toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+ docs <- tm_map(docs, toSpace, "/")
+ docs <- tm_map(docs, toSpace, "@")
+ docs <- tm_map(docs, toSpace, "\\|")
+
+ docs <- tm_map(docs, content_transformer(tolower))
+ # Remove numbers
+ docs <- tm_map(docs, removeNumbers)
+ # Remove english common stopwords
+ docs <- tm_map(docs, removeWords, stopwords("english"))
+ # Remove your own stop word
+ # specify your stopwords as a character vector
+ # Remove punctuations
+ docs <- tm_map(docs, removePunctuation)
+ # Eliminate extra white spaces
+ docs <- tm_map(docs, stripWhitespace)
+ 
+ dtm <- TermDocumentMatrix(docs)
+ m <- as.matrix(dtm)
+ v <- sort(rowSums(m),decreasing=TRUE)
+ d <- data.frame(word = names(v),freq=v)
+ head(d, 100)
+ 
+ set.seed(1234)
+ wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+           max.words=500, random.order=FALSE, rot.per=0.15, 
+           colors=brewer.pal(8, "Dark2"))
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+ word = terr$addnotes
+ word = na.omit(word)
+ docs <- Corpus(VectorSource(word[1:3500]))
+ toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+ docs <- tm_map(docs, toSpace, "/")
+ docs <- tm_map(docs, toSpace, "@")
+ docs <- tm_map(docs, toSpace, "\\|")
+
+ docs <- tm_map(docs, content_transformer(tolower))
+ # Remove numbers
+ docs <- tm_map(docs, removeNumbers)
+ # Remove english common stopwords
+ docs <- tm_map(docs, removeWords, stopwords("english"))
+ # Remove your own stop word
+ # specify your stopwords as a character vector
+ # Remove punctuations
+ docs <- tm_map(docs, removePunctuation)
+ # Eliminate extra white spaces
+ docs <- tm_map(docs, stripWhitespace)
+ 
+ dtm <- TermDocumentMatrix(docs)
+ m <- as.matrix(dtm)
+ v <- sort(rowSums(m),decreasing=TRUE)
+ d <- data.frame(word = names(v),freq=v)
+ head(d, 100)
+ 
+ set.seed(1234)
+ wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+           max.words=500, random.order=FALSE, rot.per=0.15, 
+           colors=brewer.pal(8, "Dark2"))
+  ```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
